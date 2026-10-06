@@ -122,7 +122,7 @@
     .vote-intro { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
     .vote-form { display: grid; gap: 11px; }
     .vote-field { display: grid; gap: 5px; color: var(--ink); font-size: 14px; font-weight: 700; }
-    .vote-field input { width: 100%; min-height: 46px; padding: 9px 12px; border: 1px solid #d8d0c3; border-radius: 11px; background: #fff; color: var(--ink); font: inherit; font-weight: 400; }
+    .vote-field input, .vote-field select { width: 100%; min-height: 46px; padding: 9px 12px; border: 1px solid #d8d0c3; border-radius: 11px; background: #fff; color: var(--ink); font: inherit; font-weight: 400; }
     .vote-submit { min-height: 47px; padding: 9px 14px; border: 0; border-radius: 12px; background: var(--green); color: #fff; font: inherit; font-weight: 750; cursor: pointer; }
     .vote-submit:disabled { opacity: .65; cursor: wait; }
     .vote-status { min-height: 1.5em; margin: 0; color: var(--muted); font-size: 13px; }
@@ -239,12 +239,17 @@
     <section class="dinner-vote" aria-labelledby="dinner-vote-title">
       <div class="day-heading">
         <span class="day-number" aria-hidden="true">VOTE</span>
-        <h2 id="dinner-vote-title">晚餐投票<span class="day-subtitle">想吃什麼，留下你的提案</span></h2>
+        <h2 id="dinner-vote-title">晚餐投票<span class="day-subtitle">三種台南晚餐，選一個喜歡的</span></h2>
       </div>
-      <p class="vote-intro">填入暱稱和晚餐選項即可投票。投票匿名公開、可重複累計，送出後不能修改或刪除。</p>
+      <p class="vote-intro">選一種晚餐並填入暱稱即可投票。投票匿名公開、可重複累計，送出後不能修改或刪除。</p>
       <form class="vote-form" id="dinner-vote-form">
         <label class="vote-field" for="vote-nickname">暱稱<input id="vote-nickname" name="nickname" maxlength="32" autocomplete="nickname" required></label>
-        <label class="vote-field" for="vote-option">晚餐選項<input id="vote-option" name="option" maxlength="100" placeholder="例如：台菜、牛肉湯" required></label>
+        <label class="vote-field" for="vote-option">晚餐選項<select id="vote-option" name="option" required>
+          <option value="" selected disabled>請選擇一種晚餐</option>
+          <option value="台南牛肉湯">台南牛肉湯</option>
+          <option value="台菜合菜">台菜合菜</option>
+          <option value="海鮮熱炒">海鮮熱炒</option>
+        </select></label>
         <button class="vote-submit" id="vote-submit" type="submit">送出一票</button>
         <p class="vote-status" id="vote-status" role="status" aria-live="polite">正在載入票數…</p>
       </form>
@@ -329,6 +334,7 @@
       const submitButton = document.getElementById("vote-submit");
       const status = document.getElementById("vote-status");
       const results = document.getElementById("vote-results");
+      const mealOptions = ["台南牛肉湯", "台菜合菜", "海鮮熱炒"];
       const headers = { apikey: publishableKey, Authorization: `Bearer ${publishableKey}` };
 
       async function loadVotes() {
@@ -342,10 +348,12 @@
             rows.push(...page);
             if (page.length < 1000) break;
           }
-          const counts = new Map();
-          rows.forEach(({ option }) => counts.set(option, (counts.get(option) || 0) + 1));
+          const counts = new Map(mealOptions.map((option) => [option, 0]));
+          rows.forEach(({ option }) => {
+            if (counts.has(option)) counts.set(option, counts.get(option) + 1);
+          });
           results.replaceChildren();
-          [...counts.entries()].sort(([a], [b]) => a.localeCompare(b, "zh-Hant")).forEach(([option, count]) => {
+          [...counts.entries()].forEach(([option, count]) => {
             const item = document.createElement("li");
             const label = document.createElement("span");
             const number = document.createElement("span");
@@ -355,12 +363,6 @@
             item.append(label, number);
             results.append(item);
           });
-          if (!counts.size) {
-            const item = document.createElement("li");
-            item.className = "vote-empty";
-            item.textContent = "還沒有票，來投下第一票吧。";
-            results.append(item);
-          }
           status.textContent = `目前共 ${rows.length} 票`;
         } catch {
           status.textContent = "票數載入失敗，請稍後重新整理。";
@@ -371,8 +373,8 @@
         event.preventDefault();
         const nickname = nicknameInput.value.trim();
         const option = optionInput.value.trim();
-        if (!nickname || nickname.length > 32 || !option || option.length > 100) {
-          status.textContent = "請填寫暱稱（最多 32 字）和選項（最多 100 字）。";
+        if (!nickname || nickname.length > 32 || !mealOptions.includes(option)) {
+          status.textContent = "請填寫暱稱並選擇一項晚餐。";
           return;
         }
         submitButton.disabled = true;
