@@ -130,6 +130,8 @@
     .vote-results li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 11px; background: #f6f2e9; }
     .vote-count { flex: 0 0 auto; color: var(--green); font-weight: 800; }
     .vote-empty { color: var(--muted); font-size: 14px; }
+    .organizer-panel { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+    .organizer-panel h3 { margin: 0 0 10px; }
     @media (max-width: 360px) {
       .stop { grid-template-columns: 62px minmax(0, 1fr) 40px; gap: 8px; }
       .filter-buttons { gap: 5px; }
@@ -241,7 +243,7 @@
         <span class="day-number" aria-hidden="true">VOTE</span>
         <h2 id="dinner-vote-title">晚餐投票<span class="day-subtitle">三種台南晚餐，選一個喜歡的</span></h2>
       </div>
-      <p class="vote-intro">選一種晚餐並填入暱稱即可投票。投票匿名公開、可重複累計，送出後不能修改或刪除。</p>
+      <p class="vote-intro" id="vote-intro">選一種晚餐並填入暱稱即可投票。投票匿名公開、可重複累計，送出後不能修改或刪除。</p>
       <form class="vote-form" id="dinner-vote-form">
         <label class="vote-field" for="vote-nickname">暱稱<input id="vote-nickname" name="nickname" maxlength="32" autocomplete="nickname" required></label>
         <label class="vote-field" for="vote-option">晚餐選項<select id="vote-option" name="option" required>
@@ -254,6 +256,15 @@
         <p class="vote-status" id="vote-status" role="status" aria-live="polite">正在載入票數…</p>
       </form>
       <ul class="vote-results" id="vote-results" aria-label="各晚餐選項票數"></ul>
+      <p class="vote-status" id="poll-ended" role="status" aria-live="polite" hidden>投票已結束</p>
+      <div class="organizer-panel" id="organizer-panel" hidden>
+        <h3 class="place">結束投票（主揪用）</h3>
+        <form class="vote-form" id="close-poll-form">
+          <label class="vote-field" for="close-poll-passphrase">密語<input id="close-poll-passphrase" name="passphrase" type="password" maxlength="128" autocomplete="current-password" required></label>
+          <button class="vote-submit" id="close-poll-submit" type="submit">結束投票</button>
+          <p class="vote-status" id="close-poll-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
     </section>
 
     <footer>和朋友一起，慢慢走台南 ♡</footer>
@@ -334,8 +345,46 @@
       const submitButton = document.getElementById("vote-submit");
       const status = document.getElementById("vote-status");
       const results = document.getElementById("vote-results");
+      const intro = document.getElementById("vote-intro");
+      const endedMessage = document.getElementById("poll-ended");
+      const organizerPanel = document.getElementById("organizer-panel");
+      const closeForm = document.getElementById("close-poll-form");
+      const closePassphrase = document.getElementById("close-poll-passphrase");
+      const closeSubmit = document.getElementById("close-poll-submit");
+      const closeStatus = document.getElementById("close-poll-status");
       const mealOptions = ["台南牛肉湯", "台菜合菜", "海鮮熱炒"];
       const headers = { apikey: publishableKey, Authorization: `Bearer ${publishableKey}` };
+      let pollEnded = false;
+      let pollStateAvailable = false;
+
+      function setPollEnded(ended) {
+        pollEnded = ended;
+        form.hidden = ended;
+        organizerPanel.hidden = ended;
+        endedMessage.hidden = !ended;
+        intro.hidden = ended;
+        status.textContent = ended ? "投票已結束" : "";
+      }
+
+      async function loadPollState() {
+        try {
+          const response = await fetch(`${supabaseUrl}/rest/v1/dinner_poll_status?select=ended&id=eq.1`, { headers });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const rows = await response.json();
+          if (!rows.length || typeof rows[0].ended !== "boolean") throw new Error("Missing poll state");
+          setPollEnded(rows[0].ended);
+          pollStateAvailable = true;
+          return true;
+        } catch {
+          pollStateAvailable = false;
+          form.hidden = true;
+          organizerPanel.hidden = true;
+          intro.hidden = true;
+          endedMessage.hidden = true;
+          status.textContent = "投票狀態載入失敗，請稍後重新整理。";
+          return false;
+        }
+      }
 
       async function loadVotes() {
         status.textContent = "正在載入票數…";
@@ -363,7 +412,7 @@
             item.append(label, number);
             results.append(item);
           });
-          status.textContent = `目前共 ${rows.length} 票`;
+          if (pollStateAvailable && !pollEnded) status.textContent = `目前共 ${rows.length} 票`;
         } catch {
           status.textContent = "票數載入失敗，請稍後重新整理。";
         }
@@ -371,6 +420,7 @@
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (pollEnded) return;
         const nickname = nicknameInput.value.trim();
         const option = optionInput.value.trim();
         if (!nickname || nickname.length > 32 || !mealOptions.includes(option)) {
@@ -388,15 +438,54 @@
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           optionInput.value = "";
           await loadVotes();
-          status.textContent = "投票成功，票數已更新。";
+          status.textContent = pollEnded ? "投票已結束" : "投票成功，票數已更新。";
         } catch {
-          status.textContent = "投票失敗，請檢查網路後再試。";
+          await loadPollState();
+          if (!pollEnded) status.textContent = "投票失敗，請檢查網路後再試。";
         } finally {
           submitButton.disabled = false;
         }
       });
 
-      loadVotes();
+      closeForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (pollEnded) return;
+        const passphrase = closePassphrase.value;
+        if (!passphrase || passphrase.length > 128) {
+          closeStatus.textContent = "請輸入密語。";
+          return;
+        }
+        closeSubmit.disabled = true;
+        closeStatus.textContent = "正在確認…";
+        try {
+          const response = await fetch(`${supabaseUrl}/functions/v1/close-poll`, {
+            method: "POST",
+            headers: { apikey: publishableKey, "Content-Type": "application/json" },
+            body: JSON.stringify({ passphrase })
+          });
+          if (response.status === 401) {
+            await loadPollState();
+            if (!pollEnded) closeStatus.textContent = "密語不正確，投票仍開放。";
+          } else if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          } else {
+            await loadPollState();
+            await loadVotes();
+            closeStatus.textContent = pollEnded ? "投票已結束。" : "無法確認投票狀態，請重新整理。";
+          }
+        } catch {
+          await loadPollState();
+          if (!pollEnded) closeStatus.textContent = "結束投票失敗，請檢查網路後再試。";
+        } finally {
+          closePassphrase.value = "";
+          closeSubmit.disabled = false;
+        }
+      });
+
+      (async () => {
+        await loadPollState();
+        await loadVotes();
+      })();
     })();
   </script>
 </body>
