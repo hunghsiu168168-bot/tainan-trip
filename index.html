@@ -103,6 +103,38 @@
       .stop { grid-template-columns: 62px 1fr; gap: 10px; }
       .stop:not(:last-child)::before { left: 31px; }
     }
+    .trip-controls { margin-top: 21px; padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); }
+    .trip-date { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-size: 14px; font-weight: 700; }
+    .trip-date input { width: min(58%, 190px); min-height: 42px; padding: 7px 9px; border: 1px solid #d8d0c3; border-radius: 10px; background: #fff; color: var(--ink); font: inherit; }
+    .filter-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+    .filter-button { min-height: 43px; padding: 7px 5px; border: 1px solid #d8d0c3; border-radius: 11px; background: #fffdf8; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .filter-button[aria-pressed="true"] { border-color: var(--green); background: var(--green); color: #fff; }
+    .filter-status { margin: 9px 2px 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .stop { grid-template-columns: 68px minmax(0, 1fr) 44px; }
+    .stop-check { display: grid; width: 44px; height: 44px; place-items: center; margin: -5px -7px 0 0; border-radius: 12px; cursor: pointer; }
+    .stop-check input { width: 23px; height: 23px; margin: 0; accent-color: var(--green); }
+    .stop.is-done .place, .stop.is-done .note { color: #89938c; }
+    .stop.is-done .place { text-decoration: line-through; text-decoration-thickness: 1px; }
+    .empty-day { margin-top: 16px; padding: 18px; border-radius: 15px; background: #eee8dc; color: var(--muted); text-align: center; }
+    [hidden] { display: none !important; }
+    .dinner-vote { margin-top: 25px; padding: 22px 19px; border: 1px solid var(--line); border-radius: 21px; background: var(--paper); box-shadow: 0 5px 18px #26352f08; }
+    .dinner-vote .day-heading { margin-bottom: 8px; }
+    .vote-intro { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+    .vote-form { display: grid; gap: 11px; }
+    .vote-field { display: grid; gap: 5px; color: var(--ink); font-size: 14px; font-weight: 700; }
+    .vote-field input { width: 100%; min-height: 46px; padding: 9px 12px; border: 1px solid #d8d0c3; border-radius: 11px; background: #fff; color: var(--ink); font: inherit; font-weight: 400; }
+    .vote-submit { min-height: 47px; padding: 9px 14px; border: 0; border-radius: 12px; background: var(--green); color: #fff; font: inherit; font-weight: 750; cursor: pointer; }
+    .vote-submit:disabled { opacity: .65; cursor: wait; }
+    .vote-status { min-height: 1.5em; margin: 0; color: var(--muted); font-size: 13px; }
+    .vote-results { display: grid; gap: 8px; margin: 18px 0 0; padding: 0; list-style: none; }
+    .vote-results li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 11px; background: #f6f2e9; }
+    .vote-count { flex: 0 0 auto; color: var(--green); font-weight: 800; }
+    .vote-empty { color: var(--muted); font-size: 14px; }
+    @media (max-width: 360px) {
+      .stop { grid-template-columns: 62px minmax(0, 1fr) 40px; gap: 8px; }
+      .filter-buttons { gap: 5px; }
+      .filter-button { font-size: 13px; }
+    }
   </style>
 </head>
 <body>
@@ -127,52 +159,72 @@
       </ul>
     </section>
 
-    <section class="day" aria-labelledby="day-one">
+    <section class="trip-controls" aria-label="行程篩選">
+      <label class="trip-date" for="trip-start-date"><span>第一天出發日期</span><input id="trip-start-date" type="date" aria-describedby="filter-status"></label>
+      <div class="filter-buttons" role="group" aria-label="選擇要看的行程">
+        <button class="filter-button" type="button" data-filter="today" aria-pressed="false">今天</button>
+        <button class="filter-button" type="button" data-filter="1" aria-pressed="false">第一天</button>
+        <button class="filter-button" type="button" data-filter="2" aria-pressed="false">第二天</button>
+        <button class="filter-button" type="button" data-filter="all" aria-pressed="true">全部</button>
+      </div>
+      <p class="filter-status" id="filter-status" aria-live="polite">目前顯示完整行程；設定出發日期後，可用「今天」自動切換當天行程。</p>
+    </section>
+    <p class="empty-day" id="empty-day" hidden></p>
+
+    <section class="day" data-day="1" aria-labelledby="day-one">
       <div class="day-heading">
         <span class="day-number" aria-hidden="true">DAY 1</span>
         <h2 id="day-one">老城散步日<span class="day-subtitle">古蹟、巷弄與一頓好晚餐</span></h2>
       </div>
       <ol>
-        <li class="stop">
+        <li class="stop" data-stop-id="day1-1">
           <time class="time">10:00</time>
           <div><h3 class="place">府城小巷早餐店 <span class="kind">早餐</span></h3><p class="note">先用一碗熱呼呼的在地早餐開場，慢慢進入台南步調。</p></div>
+          <label class="stop-check"><input type="checkbox" aria-label="完成：府城小巷早餐店"></label>
         </li>
-        <li class="stop">
+        <li class="stop" data-stop-id="day1-2">
           <time class="time">11:30</time>
           <div><h3 class="place">赤崁樓周邊 <span class="kind">散步</span></h3><p class="note">逛逛老城地標與附近街屋，想拍照就多留一點時間。</p></div>
+          <label class="stop-check"><input type="checkbox" aria-label="完成：赤崁樓周邊"></label>
         </li>
-        <li class="stop">
+        <li class="stop" data-stop-id="day1-3">
           <time class="time">15:00</time>
           <div><h3 class="place">巷口日光咖啡 <span class="kind">咖啡・甜點</span></h3><p class="note">找間舒服的小店歇腳，補充咖啡因和甜點能量。</p></div>
+          <label class="stop-check"><input type="checkbox" aria-label="完成：巷口日光咖啡"></label>
         </li>
-        <li class="stop">
+        <li class="stop" data-stop-id="day1-4">
           <time class="time">18:30</time>
           <div><h3 class="place">小霞的家常餐桌 <span class="kind">晚餐</span></h3><p class="note">用幾道經典台菜收尾第一天，大家一起分食最有旅行感。</p></div>
+          <label class="stop-check"><input type="checkbox" aria-label="完成：小霞的家常餐桌"></label>
         </li>
       </ol>
     </section>
 
-    <section class="day" aria-labelledby="day-two">
+    <section class="day" data-day="2" aria-labelledby="day-two">
       <div class="day-heading">
         <span class="day-number" aria-hidden="true">DAY 2</span>
         <h2 id="day-two">慢慢吃再看海<span class="day-subtitle">市場早午餐、老屋和夕陽</span></h2>
       </div>
       <ol>
-        <li class="stop">
+        <li class="stop" data-stop-id="day2-1">
           <time class="time">09:30</time>
           <div><h3 class="place">小南門市場早餐攤 <span class="kind">早午餐</span></h3><p class="note">睡飽再出門，用市場小吃替第二天補滿元氣。</p></div>
+          <label class="stop-check"><input type="checkbox" aria-label="完成：小南門市場早餐攤"></label>
         </li>
-        <li class="stop">
+        <li class="stop" data-stop-id="day2-2">
           <time class="time">11:30</time>
           <div><h3 class="place">老屋選物散策 <span class="kind">逛街</span></h3><p class="note">在巷弄裡看看老房子和小店，遇到喜歡的就進去逛逛。</p></div>
+          <label class="stop-check"><input type="checkbox" aria-label="完成：老屋選物散策"></label>
         </li>
-        <li class="stop">
+        <li class="stop" data-stop-id="day2-3">
           <time class="time">15:30</time>
           <div><h3 class="place">安平樹屋與老街 <span class="kind">散步</span></h3><p class="note">在樹根和磚牆之間探險，再沿著老街挑點伴手禮。</p></div>
+          <label class="stop-check"><input type="checkbox" aria-label="完成：安平樹屋與老街"></label>
         </li>
-        <li class="stop">
+        <li class="stop" data-stop-id="day2-4">
           <time class="time">17:30</time>
           <div><h3 class="place">漁光島夕陽步道 <span class="kind">看海</span></h3><p class="note">留一段空白給海風和夕陽，替這趟小旅行好好畫下句點。</p></div>
+          <label class="stop-check"><input type="checkbox" aria-label="完成：漁光島夕陽步道"></label>
         </li>
       </ol>
     </section>
@@ -184,8 +236,167 @@
       <figcaption>掃描 QR 碼，開啟行程頁面</figcaption>
     </figure>
 
+    <section class="dinner-vote" aria-labelledby="dinner-vote-title">
+      <div class="day-heading">
+        <span class="day-number" aria-hidden="true">VOTE</span>
+        <h2 id="dinner-vote-title">晚餐投票<span class="day-subtitle">想吃什麼，留下你的提案</span></h2>
+      </div>
+      <p class="vote-intro">填入暱稱和晚餐選項即可投票。投票匿名公開、可重複累計，送出後不能修改或刪除。</p>
+      <form class="vote-form" id="dinner-vote-form">
+        <label class="vote-field" for="vote-nickname">暱稱<input id="vote-nickname" name="nickname" maxlength="32" autocomplete="nickname" required></label>
+        <label class="vote-field" for="vote-option">晚餐選項<input id="vote-option" name="option" maxlength="100" placeholder="例如：台菜、牛肉湯" required></label>
+        <button class="vote-submit" id="vote-submit" type="submit">送出一票</button>
+        <p class="vote-status" id="vote-status" role="status" aria-live="polite">正在載入票數…</p>
+      </form>
+      <ul class="vote-results" id="vote-results" aria-label="各晚餐選項票數"></ul>
+    </section>
+
     <footer>和朋友一起，慢慢走台南 ♡</footer>
   </main>
+  <script>
+    (() => {
+      const checklistKey = "tainan-trip-checks-v1";
+      const dateKey = "tainan-trip-start-date-v1";
+      const daySections = [...document.querySelectorAll(".day[data-day]")];
+      const filterButtons = [...document.querySelectorAll(".filter-button")];
+      const dateInput = document.getElementById("trip-start-date");
+      const status = document.getElementById("filter-status");
+      const emptyMessage = document.getElementById("empty-day");
+      let checks = {};
+
+      try { checks = JSON.parse(localStorage.getItem(checklistKey) || "{}"); } catch { checks = {}; }
+      dateInput.value = localStorage.getItem(dateKey) || "";
+
+      document.querySelectorAll(".stop").forEach((stop) => {
+        const checkbox = stop.querySelector('input[type="checkbox"]');
+        checkbox.checked = Boolean(checks[stop.dataset.stopId]);
+        stop.classList.toggle("is-done", checkbox.checked);
+        checkbox.addEventListener("change", () => {
+          checks[stop.dataset.stopId] = checkbox.checked;
+          stop.classList.toggle("is-done", checkbox.checked);
+          localStorage.setItem(checklistKey, JSON.stringify(checks));
+        });
+      });
+
+      dateInput.addEventListener("change", () => {
+        if (dateInput.value) localStorage.setItem(dateKey, dateInput.value);
+        else localStorage.removeItem(dateKey);
+        if (document.querySelector('.filter-button[aria-pressed="true"]')?.dataset.filter === "today") showDay("today");
+      });
+
+      function showDay(filter) {
+        let targetDay = filter;
+        let message = "";
+        if (filter === "today") {
+          if (!dateInput.value) {
+            status.textContent = "請先設定第一天出發日期，才能判斷今天是第幾天；也可以直接選第一天或第二天。";
+            emptyMessage.hidden = true;
+            daySections.forEach((section) => { section.hidden = false; });
+            filterButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.filter === "all")));
+            return;
+          }
+          const start = new Date(`${dateInput.value}T12:00:00`);
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12);
+          const dayOffset = Math.round((today - start) / 86400000);
+          targetDay = dayOffset === 0 ? "1" : dayOffset === 1 ? "2" : "none";
+          message = targetDay === "none" ? "今天不在這兩天的行程日期內。" : `今天是行程第 ${targetDay} 天。`;
+        } else if (filter === "all") {
+          message = "目前顯示完整行程。";
+        } else {
+          message = `目前顯示第 ${filter} 天行程。`;
+        }
+
+        daySections.forEach((section) => {
+          section.hidden = targetDay !== "all" && section.dataset.day !== targetDay;
+        });
+        emptyMessage.hidden = targetDay !== "none";
+        emptyMessage.textContent = targetDay === "none" ? "今天沒有對應的行程日；可以切換第一天或第二天查看。" : "";
+        status.textContent = message;
+        filterButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.filter === filter)));
+      }
+
+      filterButtons.forEach((button) => button.addEventListener("click", () => showDay(button.dataset.filter)));
+    })();
+  </script>
+  <script>
+    (() => {
+      const supabaseUrl = "https://ycxpbmnvpdrqvdiucloc.supabase.co";
+      const publishableKey = "sb_publishable_n3hLVRfetgYjCCEkvgiBuw_bwlts18r";
+      const form = document.getElementById("dinner-vote-form");
+      const nicknameInput = document.getElementById("vote-nickname");
+      const optionInput = document.getElementById("vote-option");
+      const submitButton = document.getElementById("vote-submit");
+      const status = document.getElementById("vote-status");
+      const results = document.getElementById("vote-results");
+      const headers = { apikey: publishableKey, Authorization: `Bearer ${publishableKey}` };
+
+      async function loadVotes() {
+        status.textContent = "正在載入票數…";
+        try {
+          const rows = [];
+          for (let offset = 0; ; offset += 1000) {
+            const response = await fetch(`${supabaseUrl}/rest/v1/dinner_votes?select=option&limit=1000&offset=${offset}`, { headers });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const page = await response.json();
+            rows.push(...page);
+            if (page.length < 1000) break;
+          }
+          const counts = new Map();
+          rows.forEach(({ option }) => counts.set(option, (counts.get(option) || 0) + 1));
+          results.replaceChildren();
+          [...counts.entries()].sort(([a], [b]) => a.localeCompare(b, "zh-Hant")).forEach(([option, count]) => {
+            const item = document.createElement("li");
+            const label = document.createElement("span");
+            const number = document.createElement("span");
+            label.textContent = option;
+            number.className = "vote-count";
+            number.textContent = `${count} 票`;
+            item.append(label, number);
+            results.append(item);
+          });
+          if (!counts.size) {
+            const item = document.createElement("li");
+            item.className = "vote-empty";
+            item.textContent = "還沒有票，來投下第一票吧。";
+            results.append(item);
+          }
+          status.textContent = `目前共 ${rows.length} 票`;
+        } catch {
+          status.textContent = "票數載入失敗，請稍後重新整理。";
+        }
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const nickname = nicknameInput.value.trim();
+        const option = optionInput.value.trim();
+        if (!nickname || nickname.length > 32 || !option || option.length > 100) {
+          status.textContent = "請填寫暱稱（最多 32 字）和選項（最多 100 字）。";
+          return;
+        }
+        submitButton.disabled = true;
+        status.textContent = "正在送出…";
+        try {
+          const response = await fetch(`${supabaseUrl}/rest/v1/dinner_votes`, {
+            method: "POST",
+            headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
+            body: JSON.stringify({ nickname, option })
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          optionInput.value = "";
+          await loadVotes();
+          status.textContent = "投票成功，票數已更新。";
+        } catch {
+          status.textContent = "投票失敗，請檢查網路後再試。";
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
+      loadVotes();
+    })();
+  </script>
 </body>
 </html>
 
